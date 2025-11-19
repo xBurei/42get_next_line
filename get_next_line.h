@@ -6,7 +6,7 @@
 /*   By: vfekete <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/18 09:20:19 by vfekete           #+#    #+#             */
-/*   Updated: 2025/11/19 12:03:00 by vfekete          ###   ########.fr       */
+/*   Updated: 2025/11/19 12:43:45 by vfekete          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
+
+char    *get_next_line(int fd);
 
 typedef struct s_line {
     char            *content;
