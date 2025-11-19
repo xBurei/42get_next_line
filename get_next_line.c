@@ -6,12 +6,36 @@
 /*   By: vfekete <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/19 09:23:52 by vfekete           #+#    #+#             */
-/*   Updated: 2025/11/19 12:47:28 by vfekete          ###   ########.fr       */
+/*   Updated: 2025/11/19 13:17:33 by vfekete          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 #include <stdio.h>
+
+char	*ft_strdup(const char *str)
+{
+	size_t	strlen;
+    size_t  i;
+	char	*result;
+
+	strlen = 0;
+    while (str[strlen])
+    {
+        strlen++;
+    }
+	result = malloc(strlen + 1);
+	if (!result)
+		return (NULL);
+    i = 0;
+	while (i < strlen)
+    {
+        result[i] = str[i];
+        i++;
+    }
+    result[i] = '\0';
+	return (result);
+}
 
 t_line  *init_line_buf()
 {
@@ -53,7 +77,7 @@ t_line      *resize_line_buffer(t_line *line)
     return (line);
 }
 
-unsigned int    append(char *buffer, t_line *line, unsigned int rd_index, int rd_out)
+unsigned int    append(char *buffer, t_line *line, size_t rd_index, int rd_out)
 {
     int  i;
     
@@ -72,12 +96,44 @@ unsigned int    append(char *buffer, t_line *line, unsigned int rd_index, int rd
     return (rd_index + i);
 }
 
+char    *rd_til_nl_eof(int fd, char *b, t_line *l, size_t *rd_i, int *rd_o)
+{
+    char    *out;
+
+    out = NULL;
+    *rd_o = read(fd, b, BUFFER_SIZE);
+    if (*rd_o <= 0)
+    {
+        if (l->index)
+            return (l->content);
+        return (NULL);
+    }
+    if (l->index + *rd_o > l->capacity)
+        l = resize_line_buffer(l);
+    if (!l)
+        return (NULL);
+    *rd_i = append(b, l, *rd_i, *rd_o);
+    if ((l->index && l->content[l->index - 1] == '\n') || *rd_o < BUFFER_SIZE)
+    {
+        out = ft_strdup(l->content);
+        free(l->content);
+        free(l);
+    }
+    if (*rd_i >= (unsigned int) *rd_o)
+    {
+        *rd_o = 0;
+        *rd_i = 0;
+    }
+    return (out);
+}
+
 char    *get_next_line(int fd)
 {
     t_line                  *line;
     static char             buffer[BUFFER_SIZE];
-    static unsigned int     rd_index = 0;
+    static size_t           rd_index = 0;
     static int              rd_out = 0;
+    char                    *out;
 
     if (fd < 0)
         return (NULL);
@@ -97,32 +153,17 @@ char    *get_next_line(int fd)
     }
     while (rd_out <= 0)
     {
-        rd_out = read(fd, buffer, BUFFER_SIZE);
-        if (rd_out <= 0)
-        {
-            if (line->index)
-                return (line->content);
+        out = rd_til_nl_eof(fd, buffer, line, &rd_index, &rd_out);
+        if (out)
+            return (out);
+        if (!out && !line->index)
             return (NULL);
-        }
-        if (line->index + rd_out > line->capacity)
-            line = resize_line_buffer(line);
-        if (!line)
-            return (NULL);
-        rd_index = append(buffer, line, rd_index, rd_out);
-        if ((line->index && line->content[line->index - 1] == '\n') || rd_out < BUFFER_SIZE)
-            return (line->content);
-        if (rd_index >= (unsigned int) rd_out)
-        {
-            rd_out = 0;
-            rd_index = 0;
-        }
     }
-    return (line->content);
 }
 
-/* int main()
+int main()
 {
-    int fd = open("testfile3.txt", O_RDONLY, 0666);
-    for (int i = 0; i < 1800; i++)
+    int fd = open("testfile.txt", O_RDONLY, 0666);
+    for (int i = 0; i < 103; i++)
         printf("%d : %s", i, get_next_line(fd));
-} */
+}
