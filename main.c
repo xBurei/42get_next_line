@@ -6,7 +6,7 @@
 /*   By: vfekete <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/19 09:23:52 by vfekete           #+#    #+#             */
-/*   Updated: 2025/11/19 11:54:58 by vfekete          ###   ########.fr       */
+/*   Updated: 2025/11/19 12:15:04 by vfekete          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -110,13 +110,17 @@ char    *get_next_line(int fd)
     {
         rd_out = read(fd, buffer, BUFFER_SIZE);
         if (rd_out <= 0)
+        {
+            if (line->index)
+                return (line->content);
             return (NULL);
+        }
         if (line->index + rd_out > line->capacity)
             line = resize_line_buffer(line);
         if (!line)
             return (NULL);
         rd_index = append(buffer, line, rd_index, rd_out);
-        if (line->index && line->content[line->index - 1] == '\n')
+        if ((line->index && line->content[line->index - 1] == '\n') || rd_out < BUFFER_SIZE)
             return (line->content);
         if (rd_index >= rd_out)
         {
@@ -124,11 +128,12 @@ char    *get_next_line(int fd)
             rd_index = 0;
         }
     }
+    return (line->content);
 }
 
 int main()
 {
-    int fd = open("testfile.txt", O_RDONLY, 0666);
-    for (int i = 0; i < 101; i++)
+    int fd = open("testfile3.txt", O_RDONLY, 0666);
+    for (int i = 0; i < 1800; i++)
         printf("%d : %s", i, get_next_line(fd));
 }

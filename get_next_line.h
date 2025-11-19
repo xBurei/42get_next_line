@@ -6,7 +6,7 @@
 /*   By: vfekete <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/18 09:20:19 by vfekete           #+#    #+#             */
-/*   Updated: 2025/11/19 11:49:27 by vfekete          ###   ########.fr       */
+/*   Updated: 2025/11/19 12:03:00 by vfekete          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,11 +29,5 @@ typedef struct s_line {
     size_t          capacity;
     unsigned int    index;
 } t_line;
-
-typedef struct s_rd_metadata {
-    unsigned int    rd_start;
-    unsigned int    rd_stop;
-    int             rd_out;
-} t_rd_metadata;
 
 #endif
