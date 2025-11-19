@@ -6,7 +6,7 @@
 /*   By: vfekete <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/19 09:23:52 by vfekete           #+#    #+#             */
-/*   Updated: 2025/11/19 13:17:33 by vfekete          ###   ########.fr       */
+/*   Updated: 2025/11/19 15:29:26 by vfekete          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,8 +72,9 @@ t_line      *resize_line_buffer(t_line *line)
     i = -1;
     while ((size_t) ++i < line->index)
         line->content[i] = tmp[i];
+    free(tmp);
     while ((size_t) ++i < line->capacity)
-        line->content[i] = 0;         
+        line->content[i] = 0;
     return (line);
 }
 
@@ -114,11 +115,7 @@ char    *rd_til_nl_eof(int fd, char *b, t_line *l, size_t *rd_i, int *rd_o)
         return (NULL);
     *rd_i = append(b, l, *rd_i, *rd_o);
     if ((l->index && l->content[l->index - 1] == '\n') || *rd_o < BUFFER_SIZE)
-    {
         out = ft_strdup(l->content);
-        free(l->content);
-        free(l);
-    }
     if (*rd_i >= (unsigned int) *rd_o)
     {
         *rd_o = 0;
@@ -135,35 +132,32 @@ char    *get_next_line(int fd)
     static int              rd_out = 0;
     char                    *out;
 
+    out = NULL;
     if (fd < 0)
         return (NULL);
     line = init_line_buf();
     if (!line)
         return (NULL);
-    while (rd_out > 0)
-    {
-        rd_index = append(buffer, line, rd_index, rd_out);
-        if (rd_index >= (unsigned int) rd_out)
-        {
-            rd_out = 0;
-            rd_index = 0;
-        }
-        if (line->index && line->content[line->index - 1] == '\n')
-            return (line->content);
-    }
-    while (rd_out <= 0)
+    while (!out)
     {
         out = rd_til_nl_eof(fd, buffer, line, &rd_index, &rd_out);
-        if (out)
-            return (out);
         if (!out && !line->index)
-            return (NULL);
+            break;
     }
+    free(line->content);
+    free(line);
+    return (out);
 }
 
 int main()
 {
-    int fd = open("testfile.txt", O_RDONLY, 0666);
+    int fd = open("testfile2.txt", O_RDONLY, 0666);
+    char    *out;
     for (int i = 0; i < 103; i++)
-        printf("%d : %s", i, get_next_line(fd));
+    {
+        out = get_next_line(fd);
+        printf("%d : %s", i, out);
+        if (out)
+            free(out);
+    }
 }
