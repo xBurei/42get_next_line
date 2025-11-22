@@ -1,22 +1,39 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   get_next_line.c                                    :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: vfekete <marvin@42.fr>                     +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/11/19 09:23:52 by vfekete           #+#    #+#             */
-/*   Updated: 2025/11/19 15:29:26 by vfekete          ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "get_next_line.h"
 #include <stdio.h>
+
+void	*ft_memset(void *pointer, int value, size_t count)
+{
+	size_t			counter;
+	unsigned char	*ptr;
+
+	ptr = (unsigned char *)pointer;
+	counter = 0;
+	while (counter < count)
+	{
+		*(ptr + counter) = (unsigned char)value;
+		counter++;
+	}
+	return (pointer);
+}
+
+void	*ft_memcpy(void *dst, const void *src, size_t size)
+{
+	size_t	counter;
+
+	counter = 0;
+	if (!dst && !src)
+		return (NULL);
+	while (counter < size)
+	{
+		*(unsigned char *)(dst + counter) = *(unsigned char *)(src + counter);
+		counter++;
+	}
+	return (dst);
+}
 
 char	*ft_strdup(const char *str)
 {
 	size_t	strlen;
-    size_t  i;
 	char	*result;
 
 	strlen = 0;
@@ -27,137 +44,120 @@ char	*ft_strdup(const char *str)
 	result = malloc(strlen + 1);
 	if (!result)
 		return (NULL);
-    i = 0;
-	while (i < strlen)
+	strlen = 0;
+    while (str[strlen])
     {
-        result[i] = str[i];
-        i++;
+        result[strlen] = str[strlen];
+        strlen++;
     }
-    result[i] = '\0';
+    result[strlen] = 0;
 	return (result);
 }
 
-t_line  *init_line_buf()
+t_line    *init_line_buf(void)
 {
-    t_line *l;
-    
-    l = malloc(sizeof(t_line));
-    if (!l)
+    t_line  *out;
+
+    out = malloc(sizeof(t_line));
+    if (!out)
         return (NULL);
-    l->content = malloc(BUFFER_SIZE + 1);
-    if (!l->content)
+    out->content = malloc(BUFFER_SIZE + 1);
+    if (!out->content)
+    {
+        free(out);
         return (NULL);
-    l->capacity = BUFFER_SIZE;
-    l->index = 0;
-    l->size = 0;
-    return (l);
+    }
+    ft_memset(out->content, 0, BUFFER_SIZE + 1);
+    out->capacity = BUFFER_SIZE;
+    out->size = 0;
+    return (out);
 }
 
-t_line      *resize_line_buffer(t_line *line)
+char    *append(t_line *l, t_rd rd, int s)
 {
     char    *tmp;
-    int     i;
-            
-    tmp = malloc(line->capacity + 1);
-    if (!tmp)
-        return (NULL);
-    i = -1;
-    while ((size_t) ++i < line->index)
-        tmp[i] = line->content[i];
-    free(line->content);
-    line->content = malloc(line->capacity * 2 + 1);
-    if (!line->content)
-        return (NULL);
-    line->capacity *= 2;
-    i = -1;
-    while ((size_t) ++i < line->index)
-        line->content[i] = tmp[i];
-    free(tmp);
-    while ((size_t) ++i < line->capacity)
-        line->content[i] = 0;
-    return (line);
+
+    if (l->size + s >= l->capacity)
+    {
+        tmp = malloc(l->capacity);
+        if (!tmp)
+            return (NULL);
+        tmp = ft_memcpy(tmp, l->content, l->capacity);
+        free(l->content);
+        l->content = malloc(l->capacity * 2 + 1);
+        if (!l->content)
+            return (NULL);
+        ft_memcpy(l->content, tmp, l->capacity);
+        l->capacity *= 2;
+        free(tmp);
+    }
+    ft_memcpy(l->content + l->size, rd.buf + rd.start, s);
+    l->size += s;
+    l->content[l->size] = 0;
+    return (l->content);
 }
 
-unsigned int    append(char *buffer, t_line *line, size_t rd_index, int rd_out)
+char    *cpy_until_nl(t_line *l, t_rd *rd)
 {
-    int  i;
-    
-    i = -1;
-    while ((int) rd_index + ++i < rd_out)
+    while (rd->end < (size_t)rd->o)
     {
-        line->content[line->index + i] = buffer[rd_index + i];
-        if (line->content[line->index + i] == '\n')
+        if (rd->buf[rd->end] == '\n')
         {
-            ++i;
-            break ;
+            rd->end++;
+            break;
         }
+        rd->end++;
     }
-    line->content[line->index + i] = '\0';
-    line->index += i;
-    return (rd_index + i);
-}
-
-char    *rd_til_nl_eof(int fd, char *b, t_line *l, size_t *rd_i, int *rd_o)
-{
-    char    *out;
-
-    out = NULL;
-    *rd_o = read(fd, b, BUFFER_SIZE);
-    if (*rd_o <= 0)
+    l->content = append(l, *rd, rd->end - rd->start);
+    if (rd->end >= (size_t) rd->o)
     {
-        if (l->index)
-            return (l->content);
-        return (NULL);
+        rd->end = 0;
+        rd->o = 0;
+        ft_memset(rd->buf, 0, BUFFER_SIZE);
     }
-    if (l->index + *rd_o > l->capacity)
-        l = resize_line_buffer(l);
-    if (!l)
-        return (NULL);
-    *rd_i = append(b, l, *rd_i, *rd_o);
-    if ((l->index && l->content[l->index - 1] == '\n') || *rd_o < BUFFER_SIZE)
-        out = ft_strdup(l->content);
-    if (*rd_i >= (unsigned int) *rd_o)
-    {
-        *rd_o = 0;
-        *rd_i = 0;
-    }
-    return (out);
+    rd->start = rd->end;
+    return (l->content);
 }
 
 char    *get_next_line(int fd)
 {
-    t_line                  *line;
-    static char             buffer[BUFFER_SIZE];
-    static size_t           rd_index = 0;
-    static int              rd_out = 0;
-    char                    *out;
+    static t_rd         rd = {"", 0, 0, 0};
+    t_line              *l;
+    char                *out;
 
     out = NULL;
-    if (fd < 0)
+    l = init_line_buf();
+    if (!l)
         return (NULL);
-    line = init_line_buf();
-    if (!line)
-        return (NULL);
-    while (!out)
+    while (rd.end)
     {
-        out = rd_til_nl_eof(fd, buffer, line, &rd_index, &rd_out);
-        if (!out && !line->index)
+        l->content = cpy_until_nl(l, &rd);
+        if (l->content[l->size - 1] == '\n')
             break;
     }
-    free(line->content);
-    free(line);
+    while (!rd.end)
+    {
+        rd.o = read(fd, rd.buf, BUFFER_SIZE);
+        if (rd.o <= 0)
+            break;
+        l->content = cpy_until_nl(l, &rd);
+        if (l->content[l->size - 1] == '\n')
+            break;
+    }
+    if (l->size && rd.o >= 0)
+        out = ft_strdup(l->content);
+    free(l->content);
+    free(l);
     return (out);
 }
 
-int main()
+/* int main()
 {
-    int fd = open("testfile2.txt", O_RDONLY, 0666);
-    char    *out;
-    for (int i = 0; i < 103; i++)
-    {
-        out = get_next_line(fd);
-        printf("%d : %s", i, out);
-        if (out)
-            free(out);
-    }
-}
+    int fd = open("tests/big_line_with_nl", O_RDONLY, 0666);
+    printf("%s", get_next_line(fd));
+    printf("%s", get_next_line(fd));
+    printf("%s", get_next_line(fd));
+    printf("%s", get_next_line(fd));
+    printf("%s", get_next_line(fd));
+    printf("%s", get_next_line(fd));
+} */
